@@ -420,9 +420,12 @@
     <div style="margin-top:1.2rem;">
       <div style="font-size:.88rem; color:var(--muted); margin-bottom:.5rem;">Format des slides PPTX :</div>
       <div class="layout-options" id="layoutBtns">
-        <button class="layout-btn active" data-layout="LAYOUT_16x9" onclick="setLayout(this)">16:9 — Standard</button>
+        <button class="layout-btn active" data-layout="AUTO" onclick="setLayout(this)">✦ Auto — dimensions PDF exactes</button>
+        <button class="layout-btn" data-layout="LAYOUT_16x9" onclick="setLayout(this)">16:9 — Standard</button>
         <button class="layout-btn" data-layout="LAYOUT_4x3" onclick="setLayout(this)">4:3 — Classique</button>
-        <button class="layout-btn" data-layout="LAYOUT_WIDE" onclick="setLayout(this)">Large (13.3")</button>
+      </div>
+      <div class="info-box" id="autoLayoutInfo" style="margin-top:.7rem; font-size:.8rem;">
+        ✦ <strong>Mode Auto activé</strong> : chaque slide aura exactement la même taille que la page PDF (A4 portrait, A4 paysage, Letter…). Aucun recadrage, aucune bordure noire.
       </div>
     </div>
 
@@ -512,7 +515,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 // Structure : { name, numPages, arrayBuffer }
 let pdfFiles = [];
 
-let currentLayout = 'LAYOUT_16x9';
+let currentLayout = 'AUTO';
 let renderScale   = 2;
 let isProcessing  = false;
 
@@ -523,6 +526,9 @@ const LAYOUT_DIMS = {
   'LAYOUT_4x3':  { w: 10,    h: 7.5   },
   'LAYOUT_WIDE': { w: 13.33, h: 7.5   },
 };
+
+// Conversion px pdf.js (72 dpi) → pouces
+function pxToInches(px, scale) { return px / scale / 72; }
 
 // ─────────────────────────────────────────
 // UI HELPERS
@@ -544,6 +550,8 @@ function setLayout(btn) {
   document.querySelectorAll('#layoutBtns .layout-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   currentLayout = btn.dataset.layout;
+  const infoBox = document.getElementById('autoLayoutInfo');
+  if (infoBox) infoBox.style.display = currentLayout === 'AUTO' ? 'block' : 'none';
 }
 
 function setScale(btn) {
@@ -783,26 +791,30 @@ async function runExport() {
 
   if (totalPages === 0) throw new Error('Aucune page trouvée dans les fichiers chargés.');
 
-  // ── Dimensions PPTX ──
-  const dims = LAYOUT_DIMS[currentLayout] || LAYOUT_DIMS['LAYOUT_16x9'];
-  const SW = dims.w, SH = dims.h;
+  // ── Dimensions PPTX (mode fixe) ──
+  const dims = LAYOUT_DIMS[currentLayout] || null;
 
   // ── Instances d'export ──
   let pres         = null;
   let jsPdfInst    = null;
   const { jsPDF }  = window.jspdf;
 
+  // En mode AUTO, on crée le pres mais on fixe les dimensions plus tard (page par page)
   if (opts.pptx) {
     pres = new PptxGenJS();
-    pres.layout = currentLayout;
-    pres.title  = 'Fiches de révision Anglais';
+    pres.title  = 'Fiches de révision';
+
+    if (currentLayout !== 'AUTO') {
+      // Mode fixe : on applique le layout standard
+      pres.layout = currentLayout;
+    }
+    // En mode AUTO : on n'applique pas de layout global, on définit w/h avant chaque slide
   }
 
   let done = 0;
 
   // ── Boucle par fichier PDF ──
   for (const entry of pdfFiles) {
-    // Recharger le PDF depuis son ArrayBuffer (copie pour éviter les conflits)
     const doc = await pdfjsLib.getDocument({ data: entry.arrayBuffer.slice(0) }).promise;
 
     for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
@@ -812,11 +824,14 @@ async function runExport() {
         `⚡ ${entry.name} — page ${pageNum}`
       );
 
-      // Laisser le navigateur respirer entre chaque page
       await new Promise(r => setTimeout(r, 0));
 
       const page = await doc.getPage(pageNum);
       const vp   = page.getViewport({ scale: renderScale });
+
+      // Dimensions réelles de la page en pouces (pdf.js = 72 DPI)
+      const pageWIn = pxToInches(vp.width,  renderScale);
+      const pageHIn = pxToInches(vp.height, renderScale);
 
       // Canvas temporaire pour le rendu HD
       const canvas  = document.createElement('canvas');
@@ -824,25 +839,39 @@ async function runExport() {
       canvas.height = vp.height;
       const ctx     = canvas.getContext('2d');
       await page.render({ canvasContext: ctx, viewport: vp }).promise;
-      page.cleanup(); // libérer les ressources de la page côté pdf.js
+      page.cleanup();
 
       const imgDataJpeg = canvas.toDataURL('image/jpeg', 0.92);
 
       // ── PPTX ──
       if (opts.pptx) {
-        // Dimensions réelles de la page en pouces (pdf.js = 72 DPI)
-        const pageWIn = vp.width  / renderScale / 72;
-        const pageHIn = vp.height / renderScale / 72;
-        const pageRatio = pageWIn / pageHIn;
-        const slideRatio = SW / SH;
+        let SW, SH, imgX, imgY, imgW, imgH;
 
-        let imgW, imgH, imgX, imgY;
-        if (pageRatio > slideRatio) {
-          imgW = SW; imgH = SW / pageRatio;
-          imgX = 0;  imgY = (SH - imgH) / 2;
+        if (currentLayout === 'AUTO') {
+          // Mode AUTO : slide = exactement la taille de la page PDF
+          SW = pageWIn;
+          SH = pageHIn;
+
+          // PptxGenJS permet de changer les dimensions avant chaque slide
+          // en modifiant directement pres.presLayout
+          pres.presLayout.width  = SW;
+          pres.presLayout.height = SH;
+
+          // L'image remplit exactement le slide, sans bordure
+          imgX = 0; imgY = 0; imgW = SW; imgH = SH;
         } else {
-          imgH = SH; imgW = SH * pageRatio;
-          imgY = 0;  imgX = (SW - imgW) / 2;
+          // Mode fixe : letterbox/pillarbox centré
+          SW = dims.w; SH = dims.h;
+          const pageRatio  = pageWIn / pageHIn;
+          const slideRatio = SW / SH;
+
+          if (pageRatio > slideRatio) {
+            imgW = SW; imgH = SW / pageRatio;
+            imgX = 0;  imgY = (SH - imgH) / 2;
+          } else {
+            imgH = SH; imgW = SH * pageRatio;
+            imgY = 0;  imgX = (SW - imgW) / 2;
+          }
         }
 
         const slide = pres.addSlide();
@@ -852,9 +881,8 @@ async function runExport() {
 
       // ── PDF compilé ──
       if (opts.pdf) {
-        // Conversion pixels → mm : pdf.js utilise 72 DPI comme référence
-        const mmW = (vp.width  / renderScale / 72) * 25.4;
-        const mmH = (vp.height / renderScale / 72) * 25.4;
+        const mmW = pageWIn * 25.4;
+        const mmH = pageHIn * 25.4;
         const orientation = mmW >= mmH ? 'l' : 'p';
 
         if (!jsPdfInst) {
@@ -865,13 +893,12 @@ async function runExport() {
         jsPdfInst.addImage(imgDataJpeg, 'JPEG', 0, 0, mmW, mmH);
       }
 
-      // Libérer la mémoire du canvas dès que l'image est encodée
       canvas.width  = 0;
       canvas.height = 0;
       done++;
     }
 
-    doc.destroy(); // libérer le doc après traitement complet
+    doc.destroy();
   }
 
   // ── Compilation finale ──
@@ -880,7 +907,7 @@ async function runExport() {
 
   if (opts.pptx) {
     setProgress(90, 'Création du fichier PowerPoint…');
-    await new Promise(r => setTimeout(r, 0)); // laisser le DOM se mettre à jour
+    await new Promise(r => setTimeout(r, 0));
     const pptxBlob = await pres.write({ outputType: 'blob' });
     addResult(
       '📊', 'Présentation PowerPoint',
