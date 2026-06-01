@@ -791,24 +791,40 @@ async function runExport() {
 
   if (totalPages === 0) throw new Error('Aucune page trouvée dans les fichiers chargés.');
 
+  // ── En mode AUTO : lire les dimensions exactes de la 1re page PDF ──
+  let autoW = null, autoH = null;
+  if (currentLayout === 'AUTO' && opts.pptx) {
+    setProgress(3, 'Détection du format de la fiche…');
+    const firstDoc = await pdfjsLib.getDocument({ data: pdfFiles[0].arrayBuffer.slice(0) }).promise;
+    const firstPage = await firstDoc.getPage(1);
+    const firstVp   = firstPage.getViewport({ scale: 1 }); // scale=1 → points bruts (1pt = 1/72")
+    autoW = firstVp.width  / 72;  // points → pouces
+    autoH = firstVp.height / 72;
+    firstPage.cleanup();
+    firstDoc.destroy();
+  }
+
   // ── Dimensions PPTX (mode fixe) ──
   const dims = LAYOUT_DIMS[currentLayout] || null;
+  const SW = currentLayout === 'AUTO' ? autoW : (dims ? dims.w : 10);
+  const SH = currentLayout === 'AUTO' ? autoH : (dims ? dims.h : 7.5);
 
   // ── Instances d'export ──
   let pres         = null;
   let jsPdfInst    = null;
   const { jsPDF }  = window.jspdf;
 
-  // En mode AUTO, on crée le pres mais on fixe les dimensions plus tard (page par page)
   if (opts.pptx) {
     pres = new PptxGenJS();
-    pres.title  = 'Fiches de révision';
+    pres.title = 'Fiches de révision';
 
-    if (currentLayout !== 'AUTO') {
-      // Mode fixe : on applique le layout standard
+    if (currentLayout === 'AUTO') {
+      // Définir UNE SEULE FOIS les dimensions = format exact du PDF (requis par la spec OOXML)
+      pres.defineLayout({ name: 'PDF_AUTO', width: autoW, height: autoH });
+      pres.layout = 'PDF_AUTO';
+    } else {
       pres.layout = currentLayout;
     }
-    // En mode AUTO : on n'applique pas de layout global, on définit w/h avant chaque slide
   }
 
   let done = 0;
@@ -829,11 +845,11 @@ async function runExport() {
       const page = await doc.getPage(pageNum);
       const vp   = page.getViewport({ scale: renderScale });
 
-      // Dimensions réelles de la page en pouces (pdf.js = 72 DPI)
+      // Dimensions réelles de la page en pouces
       const pageWIn = pxToInches(vp.width,  renderScale);
       const pageHIn = pxToInches(vp.height, renderScale);
 
-      // Canvas temporaire pour le rendu HD
+      // Canvas HD
       const canvas  = document.createElement('canvas');
       canvas.width  = vp.width;
       canvas.height = vp.height;
@@ -845,26 +861,15 @@ async function runExport() {
 
       // ── PPTX ──
       if (opts.pptx) {
-        let SW, SH, imgX, imgY, imgW, imgH;
+        let imgX, imgY, imgW, imgH;
 
         if (currentLayout === 'AUTO') {
-          // Mode AUTO : slide = exactement la taille de la page PDF
-          SW = pageWIn;
-          SH = pageHIn;
-
-          // PptxGenJS permet de changer les dimensions avant chaque slide
-          // en modifiant directement pres.presLayout
-          pres.presLayout.width  = SW;
-          pres.presLayout.height = SH;
-
-          // L'image remplit exactement le slide, sans bordure
+          // Image = taille exacte du slide, aucune marge, aucun letterbox
           imgX = 0; imgY = 0; imgW = SW; imgH = SH;
         } else {
           // Mode fixe : letterbox/pillarbox centré
-          SW = dims.w; SH = dims.h;
           const pageRatio  = pageWIn / pageHIn;
           const slideRatio = SW / SH;
-
           if (pageRatio > slideRatio) {
             imgW = SW; imgH = SW / pageRatio;
             imgX = 0;  imgY = (SH - imgH) / 2;
