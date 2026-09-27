@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Téléchargeur Médias HD & Audio</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between font-sans antialiased selection:bg-brand-500 selection:text-white">
+
+    <!-- Header -->
+    <header class="border-b border-slate-800/80 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-brand-600 rounded-xl text-white shadow-lg shadow-brand-500/30">
+                    <i data-lucide="download-cloud" class="w-6 h-6"></i>
+                </div>
+                <span class="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                    MediaGrabber Pro
+                </span>
+            </div>
+            <div class="text-xs text-slate-400 bg-slate-800/60 px-3 py-1.5 rounded-full border border-slate-700/50">
+                YouTube • TikTok • Insta • MP3/MP4
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-3xl mx-auto px-4 py-12 flex-1 w-full flex flex-col justify-center">
+        
+        <div class="text-center mb-8 space-y-3">
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">
+                Téléchargez vos vidéos et audios en <span class="bg-gradient-to-r from-brand-500 to-indigo-400 bg-clip-text text-transparent">Haute Qualité</span>
+            </h1>
+            <p class="text-slate-400 text-sm sm:text-base max-w-lg mx-auto">
+                Collez l'URL de votre vidéo (YouTube, TikTok, Twitter, Instagram...) et récupérez le fichier en un clic.
+            </p>
+        </div>
+
+        <!-- Form Box -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-2xl backdrop-blur-xl relative overflow-hidden">
+            
+            <form id="downloadForm" class="space-y-5">
+                
+                <!-- URL Input -->
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
+                        <i data-lucide="link-2" class="w-5 h-5"></i>
+                    </div>
+                    <input 
+                        type="url" 
+                        id="mediaUrl" 
+                        required
+                        placeholder="https://www.youtube.com/watch?v=..." 
+                        class="w-full pl-11 pr-24 py-3.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 text-sm sm:text-base focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"
+                    >
+                    <button 
+                        type="button" 
+                        id="pasteBtn"
+                        class="absolute right-2 top-2 bottom-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-lg flex items-center gap-1.5 transition"
+                    >
+                        <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
+                        Coller
+                    </button>
+                </div>
+
+                <!-- Format Selection -->
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="relative flex items-center p-3 rounded-xl border border-slate-800 bg-slate-950/50 cursor-pointer hover:border-slate-700 transition group">
+                        <input type="radio" name="format" value="audio" checked class="sr-only peer">
+                        <div class="p-2 rounded-lg bg-slate-800 text-slate-400 peer-checked:bg-brand-600 peer-checked:text-white transition">
+                            <i data-lucide="music" class="w-5 h-5"></i>
+                        </div>
+                        <div class="ml-3">
+                            <div class="text-sm font-semibold text-white">Audio Seul</div>
+                            <div class="text-xs text-slate-400">MP3 / Meilleure qualité</div>
+                        </div>
+                        <div class="absolute inset-0 border-2 border-brand-500 rounded-xl pointer-events-none opacity-0 peer-checked:opacity-100 transition"></div>
+                    </label>
+
+                    <label class="relative flex items-center p-3 rounded-xl border border-slate-800 bg-slate-950/50 cursor-pointer hover:border-slate-700 transition group">
+                        <input type="radio" name="format" value="video" class="sr-only peer">
+                        <div class="p-2 rounded-lg bg-slate-800 text-slate-400 peer-checked:bg-brand-600 peer-checked:text-white transition">
+                            <i data-lucide="video" class="w-5 h-5"></i>
+                        </div>
+                        <div class="ml-3">
+                            <div class="text-sm font-semibold text-white">Vidéo + Audio</div>
+                            <div class="text-xs text-slate-400">MP4 / Max HD / 4K</div>
+                        </div>
+                        <div class="absolute inset-0 border-2 border-brand-500 rounded-xl pointer-events-none opacity-0 peer-checked:opacity-100 transition"></div>
+                    </label>
+                </div>
+
+                <!-- Submit Button -->
+                <button 
+                    type="submit" 
+                    id="submitBtn"
+                    class="w-full py-4 bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-xl shadow-lg shadow-brand-600/25 flex items-center justify-center gap-2 transition active:scale-[0.99]"
+                >
+                    <i data-lucide="download" class="w-5 h-5"></i>
+                    <span>Obtenir le lien de téléchargement</span>
+                </button>
+            </form>
+
+            <!-- Status & Result Zone -->
+            <div id="statusZone" class="hidden mt-6 pt-6 border-t border-slate-800">
+                <!-- Loader -->
+                <div id="loader" class="hidden flex-col items-center justify-center py-6 gap-3">
+                    <div class="w-8 h-8 border-3 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p class="text-sm text-slate-400 animate-pulse">Analyse et conversion du média en cours...</p>
+                </div>
+
+                <!-- Error Box -->
+                <div id="errorBox" class="hidden p-4 bg-red-950/40 border border-red-800/50 rounded-xl text-red-200 text-sm flex items-start gap-3">
+                    <i data-lucide="alert-circle" class="w-5 h-5 text-red-400 shrink-0 mt-0.5"></i>
+                    <div id="errorMessage">Impossible de récupérer cette vidéo. Vérifiez le lien et réessayez.</div>
+                </div>
+
+                <!-- Success Result -->
+                <div id="resultBox" class="hidden p-4 bg-emerald-950/40 border border-emerald-800/50 rounded-xl text-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="flex items-center gap-3 w-full sm:w-auto">
+                        <div class="p-2.5 bg-emerald-600/20 text-emerald-400 rounded-lg shrink-0">
+                            <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <div class="font-semibold text-white text-sm" id="resultTitle">Média prêt !</div>
+                            <div class="text-xs text-emerald-300/80">Touchez le bouton ci-dessous. Sur iPhone, Safari peut afficher le fichier avant de proposer « Enregistrer dans Fichiers ».</div>
+                        </div>
+                    </div>
+                    <a 
+                        id="downloadLink" 
+                        href="#" 
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm rounded-lg flex items-center justify-center gap-2 transition shadow-md shrink-0"
+                    >
+                        <i data-lucide="file-down" class="w-4 h-4"></i>
+                        Télécharger
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="mt-5 p-4 rounded-xl border border-slate-800 bg-slate-900/50 text-xs text-slate-400">
+            <strong class="text-slate-200">iPhone / Safari :</strong>
+            pour que les requêtes vers l’API fonctionnent correctement, cette page doit idéalement être hébergée en HTTPS.
+            Si tu ouvres directement le fichier HTML depuis « Fichiers », Safari peut bloquer la requête externe à cause des règles de sécurité du navigateur.
+        </div>
+
+        <!-- Features list -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-12">
+            <div class="p-4 bg-slate-900/40 border border-slate-800/60 rounded-xl">
+                <i data-lucide="zap" class="w-5 h-5 text-brand-500 mb-2"></i>
+                <h3 class="text-sm font-semibold text-white">Sans Serveur Requis</h3>
+                <p class="text-xs text-slate-400 mt-1">Interroge directement l'API d'extraction haute vitesse.</p>
+            </div>
+            <div class="p-4 bg-slate-900/40 border border-slate-800/60 rounded-xl">
+                <i data-lucide="sliders" class="w-5 h-5 text-brand-500 mb-2"></i>
+                <h3 class="text-sm font-semibold text-white">Qualité Maximale</h3>
+                <p class="text-xs text-slate-400 mt-1">Extrait l'audio MP3 à 320kbps ou la vidéo jusqu'en 4K.</p>
+            </div>
+            <div class="p-4 bg-slate-900/40 border border-slate-800/60 rounded-xl">
+                <i data-lucide="shield-check" class="w-5 h-5 text-brand-500 mb-2"></i>
+                <h3 class="text-sm font-semibold text-white">Gratuit & Privé</h3>
+                <p class="text-xs text-slate-400 mt-1">Aucune inscription, aucun suivi ni publicité intégrée.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/60 py-6 text-center text-xs text-slate-500">
+        MediaGrabber Pro • Propulsé par Cobalt API
+    </footer>
+
+    <!-- Logic JavaScript -->
+    <script>
+        // Init Lucide Icons
+        lucide.createIcons();
+
+        // Elements
+        const form = document.getElementById('downloadForm');
+        const urlInput = document.getElementById('mediaUrl');
+        const pasteBtn = document.getElementById('pasteBtn');
+        const statusZone = document.getElementById('statusZone');
+        const loader = document.getElementById('loader');
+        const errorBox = document.getElementById('errorBox');
+        const errorMessage = document.getElementById('errorMessage');
+        const resultBox = document.getElementById('resultBox');
+        const downloadLink = document.getElementById('downloadLink');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Paste button functionality
+        pasteBtn.addEventListener('click', async () => {
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    const text = await navigator.clipboard.readText();
+                    if (text) {
+                        urlInput.value = text.trim();
+                        return;
+                    }
+                }
+                // Safari/iOS peut refuser l'accès automatique au presse-papier
+                // depuis un fichier local : demander alors le collage natif.
+                const text = prompt('Collez ici le lien de la vidéo :');
+                if (text) urlInput.value = text.trim();
+            } catch (err) {
+                const text = prompt('Collez ici le lien de la vidéo :');
+                if (text) urlInput.value = text.trim();
+            }
+        });
+
+        // API Cobalt actuelle.
+// IMPORTANT : l'API publique peut appliquer une protection anti-bot/rate-limit.
+// Pour un usage fiable, indique une instance Cobalt que tu contrôles ou autorisée.
+const COBALT_INSTANCES = [
+    'https://api.cobalt.tools/'
+];
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const targetUrl = urlInput.value.trim();
+            const selectedFormat = document.querySelector('input[name="format"]:checked').value;
+
+            if (!targetUrl) return;
+
+            // UI Reset & Loading State
+            statusZone.classList.remove('hidden');
+            loader.classList.remove('hidden');
+            loader.classList.add('flex');
+            errorBox.classList.add('hidden');
+            resultBox.classList.add('hidden');
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            let success = false;
+
+            // Tenter la requête sur les instances configurées
+            for (const instance of COBALT_INSTANCES) {
+                try {
+                    const payload = {
+                        url: targetUrl,
+                        downloadMode: selectedFormat === 'audio' ? 'audio' : 'auto',
+                        audioFormat: 'mp3',
+                        audioBitrate: '320',
+                        videoQuality: 'max',
+                        youtubeVideoCodec: 'h264',
+                        filenameStyle: 'pretty'
+                    };
+
+                    const response = await fetch(instance, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    let data = {};
+                    try {
+                        data = await response.json();
+                    } catch (_) {
+                        throw new Error(`Réponse invalide (${response.status})`);
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(
+                            data.text ||
+                            data.code ||
+                            `Erreur HTTP ${response.status}`
+                        );
+                    }
+
+                    if (data.status === 'tunnel' || data.status === 'redirect' || data.url) {
+                        downloadLink.href = data.url;
+                        downloadLink.removeAttribute('download');
+                        resultBox.classList.remove('hidden');
+                        success = true;
+                        break;
+                    }
+
+                    if (data.status === 'picker' && Array.isArray(data.picker) && data.picker.length) {
+                        downloadLink.href = data.picker[0].url;
+                        downloadLink.removeAttribute('download');
+                        resultBox.classList.remove('hidden');
+                        success = true;
+                        break;
+                    }
+
+                    if (data.status === 'error' || data.code) {
+                        throw new Error(data.text || data.code || 'Erreur lors de l’extraction.');
+                    }
+
+                    throw new Error('Réponse inattendue de l’API.');
+                } catch (err) {
+                    console.warn(`Échec avec l'instance ${instance}:`, err);
+                }
+            }
+
+            loader.classList.add('hidden');
+            loader.classList.remove('flex');
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            if (!success) {
+                errorBox.classList.remove('hidden');
+                errorMessage.textContent = "Impossible de traiter ce lien. Sur iPhone, vérifiez aussi que cette page est ouverte depuis une adresse HTTPS et non directement depuis l’app Fichiers.";
+            }
+        });
+    </script>
+</body>
+</html>
